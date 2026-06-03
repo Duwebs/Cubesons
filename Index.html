@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+< lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
+    <title>CubeCraft Pro - WCA Analytics & Timer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        <header class="app-header">
+            <div class="header-left">
+                <i class="fa-solid fa-bars menu-icon"></i>
+                <select id="cube-type">
+                    <option value="3x3">3x3x3</option>
+                    <option value="2x2">2x2x2</option>
+                    <option value="4x4">4x4x4</option>
+                    <option value="5x5">5x5x5</option>
+                </select>
+            </div>
+            <div class="header-right">
+                <button id="wca-connect-btn" class="wca-badge"><i class="fa-solid fa-globe"></i> Connect WCA</button>
+            </div>
+        </header>
+
+        <main class="content-container">
+            
+            <section id="screen-timer" class="app-screen active">
+                <div id="scramble" class="scramble-display">Generating official scramble...</div>
+                
+                <div id="touch-trigger" class="main-timer-area">
+                    <div id="timer-clock" class="clock-face">0.00</div>
+                    <p class="tap-hint">Tap Anywhere Here to Start / Stop</p>
+                </div>
+                
+                <div class="mini-stats-grid">
+                    <div class="mini-card"><span>PB</span><strong id="mini-pb">--</strong></div>
+                    <div class="mini-card"><span>Ao5</span><strong id="mini-ao5">--</strong></div>
+                </div>
+            </section>
+
+            <section id="screen-history" class="app-screen">
+                <h3 class="screen-title">📋 Solve Session Logs</h3>
+                <div class="scrollable-view">
+                    <div id="history-grid" class="cards-grid">
+                        </div>
+                    <button id="clear-btn" class="danger-btn">Reset Category Data</button>
+                </div>
+            </section>
+
+            <section id="screen-stats" class="app-screen">
+                <h3 class="screen-title">📊 Performance Analytics</h3>
+                <div class="scrollable-view">
+                    <div class="graph-wrapper">
+                        <canvas id="analyticsChart"></canvas>
+                    </div>
+                    <div class="advanced-stats-list">
+                        <div class="stat-row"><span>Session Mean:</span><strong id="stat-mean">--</strong></div>
+                        <div class="stat-row"><span>Median:</span><strong id="stat-median">--</strong></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="screen-profile" class="app-screen">
+                <h3 class="screen-title">🌐 WCA Profile</h3>
+                <div class="profile-card-unlinked">
+                    <i class="fa-solid fa-user-lock lock-avatar"></i>
+                    <h4>WCA Account Status</h4>
+                    <p id="wca-status-text">Connect your official profile to sync World Rankings, PR singles, and local competitions.</p>
+                    <button id="wca-mock-trigger" class="primary-btn">Sign in via worldcubeassociation.org</button>
+                </div>
+            </section>
+
+        </main>
+
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-target="screen-timer">
+                <i class="fa-solid fa-stopwatch"></i>
+                <span>Timer</span>
+            </button>
+            <button class="nav-item" data-target="screen-history">
+                <i class="fa-solid fa-grip"></i>
+                <span>History</span>
+            </button>
+            <button class="nav-item" data-target="screen-stats">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Stats</span>
+            </button>
+            <button class="nav-item" data-target="screen-profile">
+                <i class="fa-solid fa-user"></i>
+                <span>WCA</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
