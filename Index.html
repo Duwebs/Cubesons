@@ -1,101 +1,38 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=no">
-    <title>CubeCraft Pro - WCA Analytics & Timer</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CubeSons | Premium Speedcubing Timer</title>
+  <link rel="stylesheet" href="Style.css">
 </head>
 <body>
-
-    <div class="app-wrapper">
-        <header class="app-header">
-            <div class="header-left">
-                <i class="fa-solid fa-bars menu-icon"></i>
-                <select id="cube-type">
-                    <option value="3x3">3x3x3</option>
-                    <option value="2x2">2x2x2</option>
-                    <option value="4x4">4x4x4</option>
-                    <option value="5x5">5x5x5</option>
-                </select>
-            </div>
-            <div class="header-right">
-                <button id="wca-connect-btn" class="wca-badge"><i class="fa-solid fa-globe"></i> Connect WCA</button>
-            </div>
-        </header>
-
-        <main class="content-container">
-            
-            <section id="screen-timer" class="app-screen active">
-                <div id="scramble" class="scramble-display">Generating official scramble...</div>
-                
-                <div id="touch-trigger" class="main-timer-area">
-                    <div id="timer-clock" class="clock-face">0.00</div>
-                    <p class="tap-hint">Tap Anywhere Here to Start / Stop</p>
-                </div>
-                
-                <div class="mini-stats-grid">
-                    <div class="mini-card"><span>PB</span><strong id="mini-pb">--</strong></div>
-                    <div class="mini-card"><span>Ao5</span><strong id="mini-ao5">--</strong></div>
-                </div>
-            </section>
-
-            <section id="screen-history" class="app-screen">
-                <h3 class="screen-title">📋 Solve Session Logs</h3>
-                <div class="scrollable-view">
-                    <div id="history-grid" class="cards-grid">
-                        </div>
-                    <button id="clear-btn" class="danger-btn">Reset Category Data</button>
-                </div>
-            </section>
-
-            <section id="screen-stats" class="app-screen">
-                <h3 class="screen-title">📊 Performance Analytics</h3>
-                <div class="scrollable-view">
-                    <div class="graph-wrapper">
-                        <canvas id="analyticsChart"></canvas>
-                    </div>
-                    <div class="advanced-stats-list">
-                        <div class="stat-row"><span>Session Mean:</span><strong id="stat-mean">--</strong></div>
-                        <div class="stat-row"><span>Median:</span><strong id="stat-median">--</strong></div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="screen-profile" class="app-screen">
-                <h3 class="screen-title">🌐 WCA Profile</h3>
-                <div class="profile-card-unlinked">
-                    <i class="fa-solid fa-user-lock lock-avatar"></i>
-                    <h4>WCA Account Status</h4>
-                    <p id="wca-status-text">Connect your official profile to sync World Rankings, PR singles, and local competitions.</p>
-                    <button id="wca-mock-trigger" class="primary-btn">Sign in via worldcubeassociation.org</button>
-                </div>
-            </section>
-
-        </main>
-
-        <nav class="bottom-nav">
-            <button class="nav-item active" data-target="screen-timer">
-                <i class="fa-solid fa-stopwatch"></i>
-                <span>Timer</span>
-            </button>
-            <button class="nav-item" data-target="screen-history">
-                <i class="fa-solid fa-grip"></i>
-                <span>History</span>
-            </button>
-            <button class="nav-item" data-target="screen-stats">
-                <i class="fa-solid fa-chart-line"></i>
-                <span>Stats</span>
-            </button>
-            <button class="nav-item" data-target="screen-profile">
-                <i class="fa-solid fa-user"></i>
-                <span>WCA</span>
-            </button>
-        </nav>
-    </div>
-
-    <script src="script.js"></script>
+  <div id="splash-screen" class="splash-screen" aria-label="Loading CubeSons"><div class="splash-mark">C</div><div class="splash-word">Cube<span>Sons</span></div><div class="splash-line"><i></i></div><p>READY. SET. SOLVE.</p></div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#timer"><span class="brand-mark">C</span><span>ube<span class="brand-accent">Sons</span></span></a>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button class="nav-item active" data-target="timer"><span class="nav-icon">+</span>Timer</button>
+        <button class="nav-item" data-target="history"><span class="nav-icon">=</span>History</button>
+        <button class="nav-item" data-target="stats"><span class="nav-icon">↗</span>Analytics</button>
+        <button class="nav-item" data-target="settings"><span class="nav-icon">*</span>Settings</button>
+      </nav>
+      <div class="sidebar-footer"><span class="status-dot"></span>Local session<br><small>Data stays on this device</small></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><div><p class="eyebrow">CUBESONS / SESSION 01</p><h1 id="page-title">Timer</h1></div><div class="topbar-actions"><label class="cube-picker">CUBE <select id="cube-type"><option value="3x3">3 × 3</option><option value="2x2">2 × 2</option><option value="4x4">4 × 4</option><option value="5x5">5 × 5</option></select></label><button class="quick-settings" data-target="settings" title="Open settings">*</button></div></header>
+      <section id="timer" class="view active-view">
+        <div class="timer-layout">
+          <div class="timer-panel" id="timer-panel"><div class="scramble-label">CURRENT SCRAMBLE <button id="new-scramble" title="Generate a new scramble">↻</button></div><div id="scramble" class="scramble">Generating scramble...</div><button id="touch-trigger" class="timer-zone" aria-label="Start or stop timer"><span id="timer-clock">0.00</span><span id="timer-state">HOLD TO START</span></button><div class="timer-controls"><span><kbd>SPACE</kbd> start / stop</span><span><kbd>R</kbd> new scramble</span><button id="inspection-start" class="control-link">15s inspection</button></div><div class="penalty-controls"><span>Last solve</span><button id="plus-two" class="penalty-button">+2</button><button id="dnf" class="penalty-button">DNF</button></div></div>
+          <div class="session-panel"><div class="section-heading"><div><p class="eyebrow">TODAY'S RUN</p><h2>Session pulse</h2></div><span id="solve-count" class="count-badge">0 solves</span></div><div class="metric-grid"><div class="metric"><span>Personal best</span><strong id="mini-pb">--</strong></div><div class="metric"><span>Average of 5</span><strong id="mini-ao5">--</strong></div><div class="metric"><span>Average of 12</span><strong id="mini-ao12">--</strong></div><div class="metric"><span>Session mean</span><strong id="mini-mean">--</strong></div><div class="metric"><span>Last solve</span><strong id="mini-last">--</strong></div></div><div class="recent-heading"><span>Recent solves</span><button class="text-button" data-target="history">View all →</button></div><div id="recent-solves" class="recent-solves"><p class="empty-state">Your first solve is waiting.</p></div></div>
+        </div>
+      </section>
+      <section id="history" class="view"><div class="section-heading"><div><p class="eyebrow">ALL ATTEMPTS</p><h2>Session history</h2></div><div class="section-actions"><button id="export-btn" class="outline-button">Export CSV</button><button id="clear-btn" class="outline-button">Clear session</button></div></div><div id="history-list" class="history-list"></div></section>
+      <section id="stats" class="view"><div class="section-heading"><div><p class="eyebrow">NUMBERS BEHIND THE SOLVES</p><h2>Analytics</h2></div></div><div class="stats-board"><div class="chart-card"><div class="chart-header"><span>Last 12 solves</span><strong id="chart-best">--</strong></div><div id="chart" class="chart"></div></div><div class="stat-table"><div><span>Mean</span><strong id="stat-mean">--</strong></div><div><span>Median</span><strong id="stat-median">--</strong></div><div><span>Average of 3</span><strong id="stat-ao3">--</strong></div><div><span>Average of 12</span><strong id="stat-ao12">--</strong></div><div><span>Best single</span><strong id="stat-best">--</strong></div><div><span>Total solves</span><strong id="stat-total">0</strong></div></div></div></section>
+      <section id="settings" class="view settings-view"><div class="section-heading"><div><p class="eyebrow">PERSONALIZE YOUR CUBESONS</p><h2>Settings</h2></div><span class="settings-badge">Saved locally</span></div><div class="settings-grid"><div class="settings-card"><p class="settings-kicker">APP EXPERIENCE</p><h3>Make it yours</h3><div class="setting-row"><div><strong>Appearance</strong><small>Switch between a bright or night workspace.</small></div><button id="theme-toggle" class="setting-action">Dark mode</button></div><div class="setting-row"><div><strong>Timer sound</strong><small>Play a subtle tone when a solve stops.</small></div><button id="sound-toggle" class="setting-action">Sound on</button></div></div><div class="settings-card"><p class="settings-kicker">TIMER STAGE</p><h3>Background studio</h3><p class="settings-copy">Upload any image to create a personal timer backdrop. It stays on this device.</p><div class="settings-upload"><label for="bg-upload" class="upload-button">Choose image</label><input id="bg-upload" type="file" accept="image/*"><button id="clear-bg" class="text-button">Remove image</button></div><div class="accent-row"><label for="accent-picker">Accent color</label><input id="accent-picker" type="color" value="#d7f36b"></div><div id="customizer" class="customizer settings-customizer"><span class="custom-preview"></span><span>Preview updates instantly on Timer.</span></div></div><div class="settings-card"><p class="settings-kicker">SESSION DATA</p><h3>Take your data with you</h3><p class="settings-copy">Export your solves as a CSV file or start a fresh session.</p><div class="settings-buttons"><button id="settings-export" class="outline-button">Export session CSV</button><button id="settings-clear" class="danger-outline">Clear all solves</button></div></div></div></section>
+    </main>
+    <nav class="bottom-nav" aria-label="Mobile navigation"><button class="nav-item active" data-target="timer"><span class="nav-icon">+</span><span>Timer</span></button><button class="nav-item" data-target="history"><span class="nav-icon">=</span><span>History</span></button><button class="nav-item" data-target="stats"><span class="nav-icon">↗</span><span>Stats</span></button><button class="nav-item" data-target="settings"><span class="nav-icon">*</span><span>Settings</span></button></nav>
+  </div>
+  <script src="Script.js"></script>
 </body>
 </html>

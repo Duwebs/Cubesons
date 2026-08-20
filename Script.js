@@ -1,195 +1,57 @@
-// --- STATE MANAGEMENT ---
-let sessionData = JSON.parse(localStorage.getItem('cubeAppSolves')) || {
-    "3x3": [], "2x2": [], "4x4": [], "5x5": []
-};
-
-let currentCube = "3x3";
-let timerState = 'stopped'; // stopped, holding, ready, running
-let holdTimeout;
+const storageKey = 'cubex-session-v1';
+let solves = JSON.parse(localStorage.getItem(storageKey) || '[]');
+let currentCube = '3x3';
+let timerState = 'stopped';
+let pressTimer;
 let startTime;
-let timerInterval;
-let myChart = null;
-
-// DOM Elements
-const navItems = document.querySelectorAll('.nav-item');
-const cubeSelect = document.getElementById('cube-type');
-const clockFace = document.getElementById('timer-clock');
-const touchArea = document.getElementById('touch-trigger');
-const scrambleBox = document.getElementById('scramble');
-const historyGrid = document.getElementById('history-grid');
-
-// --- 1. NAVIGATION TABS LOGIC ---
-navItems.forEach(item => {
-    item.addEventListener('click', () => {
-        document.querySelector('.nav-item.active').classList.remove('active');
-        document.querySelector('.app-screen.active').classList.remove('active');
-        item.classList.add('active');
-        const target = item.getAttribute('data-target');
-        document.getElementById(target).classList.add('active');
-        
-        if(target === 'screen-stats') renderAnalyticsChart();
-    });
-});
-
-// --- 2. MULTI-CUBE SCRAMBLE ENGINE ---
-function generateScramble() {
-    let moves = ['R', 'L', 'U', 'D', 'F', 'B'];
-    let modifiers = ['', "'", '2'];
-    let length = currentCube === '2x2' ? 10 : currentCube === '4x4' ? 40 : currentCube === '5x5' ? 50 : 22;
-    
-    if (currentCube === '4x4' || currentCube === '5x5') {
-        moves.push('Rw', 'Uw', 'Fw', 'Lw');
-    }
-
-    let scramble = [];
-    let lastMove = '';
-    while (scramble.length < length) {
-        let move = moves[Math.floor(Math.random() * moves.length)];
-        if (move !== lastMove) {
-            scramble.push(move + modifiers[Math.floor(Math.random() * modifiers.length)]);
-            lastMove = move;
-        }
-    }
-    scrambleBox.innerText = scramble.join(' ');
+let interval;
+let inspectionInterval;
+let soundEnabled = localStorage.getItem('cubex-sound') !== 'off';
+const backgroundKey = 'cubesons-timer-background';
+const accentKey = 'cubesons-accent';
+const $ = (selector) => document.querySelector(selector);
+const clock = $('#timer-clock');
+const timerZone = $('#touch-trigger');
+function applyTheme(theme) { document.body.dataset.theme = theme; document.body.classList.toggle('dark-mode', theme === 'dark'); $('#theme-toggle').textContent = theme === 'dark' ? 'Light mode' : 'Dark mode'; localStorage.setItem('cubex-theme', theme); }
+function beep() { if (!soundEnabled || !window.AudioContext) return; const context = new AudioContext(); const oscillator = context.createOscillator(); const gain = context.createGain(); oscillator.frequency.value = 640; gain.gain.value = 0.04; oscillator.connect(gain); gain.connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + 0.08); }
+function applyCustomization() { const background = localStorage.getItem(backgroundKey); const accent = localStorage.getItem(accentKey); const panel = $('#timer-panel'); if (background) { panel.style.backgroundImage = `url(${background})`; panel.classList.add('custom-bg'); } if (accent) { document.documentElement.style.setProperty('--lime', accent); $('#accent-picker').value = accent; } }
+function formatTime(value) { return value === 'DNF' ? 'DNF' : value == null ? '--' : `${value.toFixed(2)}s`; }
+function numericSolves() { return solves.filter((value) => typeof value === 'number' && Number.isFinite(value)); }
+function makeScramble() {
+  const faces = ['R', 'L', 'U', 'D', 'F', 'B']; const modifiers = ['', "'", '2'];
+  const length = currentCube === '2x2' ? 11 : currentCube === '4x4' ? 40 : currentCube === '5x5' ? 50 : 20;
+  const result = []; let previous = '';
+  while (result.length < length) { const face = faces[Math.floor(Math.random() * faces.length)]; if (face !== previous) { result.push(face + modifiers[Math.floor(Math.random() * modifiers.length)]); previous = face; } }
+  $('#scramble').textContent = result.join('  ');
 }
-
-// --- 3. PHONE TOUCH & SPACEBAR TIMER LOGIC ---
-function handlePressStart() {
-    if (timerState === 'running') {
-        stopTimer();
-    } else if (timerState === 'stopped') {
-        timerState = 'holding';
-        clockFace.classList.add('holding');
-        holdTimeout = setTimeout(() => {
-            timerState = 'ready';
-            clockFace.classList.remove('holding');
-            clockFace.classList.add('ready');
-            clockFace.innerText = "0.00";
-        }, 500); // 0.5s screen-hold configuration
-    }
+function averages() {
+  const clean = numericSolves(); const sorted = [...clean].sort((a, b) => a - b); const mean = clean.length ? clean.reduce((sum, value) => sum + value, 0) / clean.length : null; const middle = Math.floor(sorted.length / 2);
+  const median = sorted.length ? (sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2) : null;
+  const average = (count) => solves.length >= count && solves.slice(0, count).every((value) => typeof value === 'number') ? solves.slice(0, count).sort((a, b) => a - b).slice(1, -1).reduce((sum, value) => sum + value, 0) / (count - 2) : null;
+  return { mean, median, ao3: average(3), ao5: average(5), ao12: average(12), best: sorted[0] || null };
 }
-
-function handlePressRelease() {
-    clearTimeout(holdTimeout);
-    if (timerState === 'ready') {
-        timerState = 'running';
-        clockFace.classList.remove('ready');
-        startTime = performance.now();
-        timerInterval = setInterval(() => {
-            clockFace.innerText = ((performance.now() - startTime) / 1000).toFixed(2);
-        }, 10);
-    } else if (timerState === 'holding') {
-        timerState = 'stopped';
-        clockFace.classList.remove('holding');
-    }
+function solveRows(list, limit) { return list.slice(0, limit).map((time, index) => `<div class="solve-row"><span><small>#${list.length - index}</small> ${index === 0 ? 'Latest solve' : 'Solve'}</span><span class="solve-actions"><strong>${formatTime(time)}</strong><button class="delete-solve" data-index="${index}" title="Delete solve">×</button></span></div>`).join(''); }
+function render() {
+  const stats = averages(); $('#mini-pb').textContent = formatTime(stats.best); $('#mini-ao5').textContent = formatTime(stats.ao5); $('#mini-ao12').textContent = formatTime(stats.ao12); $('#mini-mean').textContent = formatTime(stats.mean); $('#mini-last').textContent = formatTime(solves[0]); $('#solve-count').textContent = `${solves.length} solve${solves.length === 1 ? '' : 's'}`;
+  $('#recent-solves').innerHTML = solves.length ? solveRows(solves, 4) : '<p class="empty-state">Your first solve is waiting.</p>'; $('#history-list').innerHTML = solves.length ? solveRows(solves) : '<p class="empty-state">No solves in this session yet.</p>';
+  $('#stat-mean').textContent = formatTime(stats.mean); $('#stat-median').textContent = formatTime(stats.median); $('#stat-ao3').textContent = formatTime(stats.ao3); $('#stat-ao12').textContent = formatTime(stats.ao12); $('#stat-best').textContent = formatTime(stats.best); $('#stat-total').textContent = solves.length; renderChart();
 }
-
-// Mobile Screen Tap Bindings
-touchArea.addEventListener('touchstart', (e) => { e.preventDefault(); handlePressStart(); });
-touchArea.addEventListener('touchend', (e) => { e.preventDefault(); handlePressRelease(); });
-// Desktop Fallback
-window.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); handlePressStart(); } });
-window.addEventListener('keyup', (e) => { if(e.code === 'Space') handlePressRelease(); });
-
-function stopTimer() {
-    clearInterval(timerInterval);
-    timerState = 'stopped';
-    let solveTime = parseFloat(clockFace.innerText);
-    
-    // Save to dynamic specific cube storage array
-    sessionData[currentCube].unshift(solveTime);
-    localStorage.setItem('cubeAppSolves', JSON.stringify(sessionData));
-    
-    generateScramble();
-    updateDashboard();
-}
-
-// --- 4. DYNAMIC STATS & CARDS LOGIC ---
-function updateDashboard() {
-    let list = sessionData[currentCube] || [];
-    
-    // Render History Screen Cards Grid (Screenshot 3 Style)
-    historyGrid.innerHTML = list.length === 0 ? '<p class="empty-msg">No solves yet.</p>' : '';
-    list.forEach((time, index) => {
-        let card = document.createElement('div');
-        card.className = 'solve-card';
-        card.innerHTML = `<span class="card-idx">#${list.length - index}</span><span class="card-time">${time.toFixed(2)}s</span>`;
-        historyGrid.appendChild(card);
-    });
-
-    // Update Main Screen Fast Track Widgets
-    document.getElementById('mini-pb').innerText = list.length > 0 ? Math.min(...list).toFixed(2) + 's' : '--';
-    
-    if (list.length >= 5) {
-        let last5 = list.slice(0, 5).sort((a,b)=>a-b);
-        last5.pop(); last5.shift(); // Remove best and worst
-        let avg = last5.reduce((a,b)=>a+b, 0) / 3;
-        document.getElementById('mini-ao5').innerText = avg.toFixed(2) + 's';
-    } else {
-        document.getElementById('mini-ao5').innerText = '--';
-    }
-}
-
-// --- 5. CHART.JS GRAPH CONTROLLER ---
-function renderAnalyticsChart() {
-    let list = [...sessionData[currentCube]].reverse(); // Chronological order
-    let labels = list.map((_, i) => i + 1);
-    
-    let ctx = document.getElementById('analyticsChart').getContext('2d');
-    if (myChart) myChart.destroy(); // Clear old instance on data changes
-
-    myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Solve Times',
-                data: list,
-                borderColor: '#38bdf8',
-                backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                borderWidth: 2,
-                tension: 0.2
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: { y: { beginAtZero: false } }
-        }
-    });
-
-    // Mean / Median calculations
-    if(list.length > 0) {
-        let sum = list.reduce((a,b)=>a+b,0);
-        document.getElementById('stat-mean').innerText = (sum/list.length).toFixed(2) + 's';
-        let sorted = [...list].sort((a,b)=>a-b);
-        let mid = Math.floor(sorted.length/2);
-        document.getElementById('stat-median').innerText = sorted.length % 2 !== 0 ? sorted[mid].toFixed(2)+'s' : ((sorted[mid-1]+sorted[mid])/2).toFixed(2)+'s';
-    }
-}
-
-// Category Change Handler
-cubeSelect.addEventListener('change', (e) => {
-    currentCube = e.target.value;
-    generateScramble();
-    updateDashboard();
-});
-
-// WCA Mock Connect Feature
-document.getElementById('wca-mock-trigger').addEventListener('click', () => {
-    document.getElementById('wca-status-text').innerHTML = "🟢 Connected as <strong>WCA Competitor</strong><br>PR Single: 32.40s | Rank: National #450";
-    alert("WCA Connected Successfully!");
-});
-
-// Reset
-document.getElementById('clear-btn').addEventListener('click', () => {
-    if(confirm("Reset data?")) {
-        sessionData[currentCube] = [];
-        localStorage.setItem('cubeAppSolves', JSON.stringify(sessionData));
-        updateDashboard();
-    }
-});
-
-// Initiation Trigger
-generateScramble();
-updateDashboard();
-
+function renderChart() { const values = numericSolves().slice(0, 12).reverse(); const max = Math.max(...values, 1); $('#chart-best').textContent = values.length ? `best ${formatTime(Math.min(...values))}` : 'No data'; $('#chart').innerHTML = values.length ? values.map((value, index) => `<div class="bar" style="height:${Math.max(7, value / max * 82)}%"><span>${index + 1}</span></div>`).join('') : '<p class="empty-state">Solve a few cubes to see your pace.</p>'; }
+function startInspection() { if (timerState !== 'stopped') return; clearInterval(inspectionInterval); let remaining = 15; timerState = 'inspecting'; clock.textContent = remaining.toFixed(2); $('#timer-state').textContent = 'INSPECTION'; inspectionInterval = setInterval(() => { remaining -= 0.1; clock.textContent = Math.max(remaining, 0).toFixed(2); if (remaining <= 0) { clearInterval(inspectionInterval); timerState = 'stopped'; clock.textContent = '0.00'; $('#timer-state').textContent = 'INSPECTION OVER'; } }, 100); }
+function beginHold() { if (timerState === 'running') return stopTimer(); if (timerState !== 'stopped') return; timerState = 'holding'; timerZone.classList.add('ready'); $('#timer-state').textContent = 'RELEASE TO START'; pressTimer = setTimeout(() => { timerState = 'ready'; $('#timer-state').textContent = 'READY'; }, 350); }
+function releaseHold() { clearTimeout(pressTimer); if (timerState === 'holding') { timerState = 'stopped'; timerZone.classList.remove('ready'); $('#timer-state').textContent = 'HOLD TO START'; return; } if (timerState === 'ready') { timerState = 'running'; timerZone.classList.remove('ready'); timerZone.classList.add('running'); $('#timer-state').textContent = 'RUNNING'; startTime = performance.now(); interval = setInterval(() => { clock.textContent = ((performance.now() - startTime) / 1000).toFixed(2); }, 10); } }
+function stopTimer() { clearInterval(interval); const time = Number(clock.textContent); if (time > 0) solves.unshift(time); localStorage.setItem(storageKey, JSON.stringify(solves)); timerState = 'stopped'; timerZone.classList.remove('running'); $('#timer-state').textContent = 'HOLD TO START'; beep(); makeScramble(); render(); }
+document.querySelectorAll('.nav-item, .text-button, .quick-settings').forEach((button) => button.addEventListener('click', () => { const target = button.dataset.target; if (!target) return; document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active-view', view.id === target)); document.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.target === target)); $('#page-title').textContent = target === 'timer' ? 'Timer' : target[0].toUpperCase() + target.slice(1); }));
+$('#cube-type').addEventListener('change', (event) => { currentCube = event.target.value; makeScramble(); }); $('#new-scramble').addEventListener('click', makeScramble); $('#inspection-start').addEventListener('click', startInspection); $('#plus-two').addEventListener('click', () => { if (typeof solves[0] === 'number') { solves[0] += 2; localStorage.setItem(storageKey, JSON.stringify(solves)); render(); } }); $('#dnf').addEventListener('click', () => { if (solves.length) { solves[0] = 'DNF'; localStorage.setItem(storageKey, JSON.stringify(solves)); render(); } }); $('#clear-btn').addEventListener('click', () => { if (solves.length && confirm('Clear this session?')) { solves = []; localStorage.removeItem(storageKey); render(); } });
+document.addEventListener('click', (event) => { const button = event.target.closest('.delete-solve'); if (button) { solves.splice(Number(button.dataset.index), 1); localStorage.setItem(storageKey, JSON.stringify(solves)); render(); } });
+$('#theme-toggle').addEventListener('click', () => applyTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'));
+$('#sound-toggle').addEventListener('click', () => { soundEnabled = !soundEnabled; localStorage.setItem('cubex-sound', soundEnabled ? 'on' : 'off'); $('#sound-toggle').textContent = soundEnabled ? 'Sound on' : 'Sound off'; });
+$('#bg-upload').addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { localStorage.setItem(backgroundKey, reader.result); applyCustomization(); } catch (error) { alert('This image is too large. Please choose a smaller image.'); } }; reader.readAsDataURL(file); });
+$('#accent-picker').addEventListener('input', (event) => { document.documentElement.style.setProperty('--lime', event.target.value); localStorage.setItem(accentKey, event.target.value); });
+$('#clear-bg').addEventListener('click', () => { localStorage.removeItem(backgroundKey); $('#timer-panel').style.backgroundImage = ''; $('#timer-panel').classList.remove('custom-bg'); $('#bg-upload').value = ''; });
+function exportSession() { const csv = ['Solve,Time'].concat(solves.map((value, index) => `${solves.length - index},${formatTime(value)}`)).join('\n'); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); link.download = 'cubesons-session.csv'; link.click(); URL.revokeObjectURL(link.href); }
+$('#export-btn').addEventListener('click', exportSession); $('#settings-export').addEventListener('click', exportSession);
+$('#settings-clear').addEventListener('click', () => { if (solves.length && confirm('Clear all session solves?')) { solves = []; localStorage.removeItem(storageKey); render(); } });
+timerZone.addEventListener('pointerdown', (event) => { event.preventDefault(); beginHold(); }); timerZone.addEventListener('pointerup', (event) => { event.preventDefault(); releaseHold(); }); timerZone.addEventListener('pointerleave', () => { if (timerState === 'holding' || timerState === 'ready') releaseHold(); }); window.addEventListener('keydown', (event) => { if (event.code === 'Space' && !event.repeat) { event.preventDefault(); beginHold(); } if (event.key.toLowerCase() === 'r') makeScramble(); }); window.addEventListener('keyup', (event) => { if (event.code === 'Space') { event.preventDefault(); releaseHold(); } });
+applyTheme(localStorage.getItem('cubex-theme') || 'dark'); $('#sound-toggle').textContent = soundEnabled ? 'Sound on' : 'Sound off'; applyCustomization(); makeScramble(); render();
+window.setTimeout(() => $('#splash-screen').classList.add('is-hidden'), 1150);
